@@ -4,5 +4,5 @@ spec:
   # the environments key is exactly the same as the environments key in qbec.yaml
   environments:
     k8slab:
-      defaultNamespace: gitlab-runners
+      defaultNamespace: ci-runners
       server: https://127.0.0.1:6443

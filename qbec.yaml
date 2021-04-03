@@ -1,0 +1,31 @@
+apiVersion: qbec.io/v1alpha1
+kind: App
+metadata:
+  name: gitlab-runners
+spec:
+  libPaths:
+  - vendor/
+  vars:
+    external:
+    - name: com.gitlab.ci.cijoburl
+      default: data:,Not%20in%20Gitlab%20CI
+    - name: com.gitlab.ci.revision
+      default: unknown
+    - name: com.gitlab.ci.project
+      default: gitlab-runners
+    - name: rkways.com/prune-key
+      default: gitlab-runners-dev
+    - name: kubernetes.io/change-cause
+      default: unknown
+    - name: GITLAB_RUNNER_TOKEN
+      default: invalid_no_access
+      secret: true
+    - name: CHART_VERSION
+      default: 0.27.0
+  postProcessor: vendor/k8slab-kube-libsonnet/pp.libsonnet
+  environments:
+    default:
+      defaultNamespace: dummy
+      server: https://127.0.0.1:6443
+  envFiles:
+  - environments.yaml
