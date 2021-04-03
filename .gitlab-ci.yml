@@ -1,0 +1,66 @@
+stages:
+- deploy
+
+image: rkwaysltd/citools:v0.0.3@sha256:01890f97b011e04d5de5e4518a50a977585da7571c316816a2a00ecfa97dd972
+
+variables:
+  QBEC_YES: "true"
+  QBEC_ENV: "k8slab"
+  CHART_VERSION: "0.27.0"
+  CHART_SHA256: ef34b1696d9eb945cb1221cef8031caded07dd6f345f6228d41ec49ba73986fc
+
+.qbec-cmd:
+  stage: deploy
+  script:
+  - jb install
+  - helm pull gitlab-runner --repo https://charts.gitlab.io "${CHART_VERSION:?}" -d helm
+  - |
+    CHECKSUM=$(sha256sum "helm/gitlab-runner-${CHART_VERSION:?}.tgz" | cut -d ' ' -f1)
+    [ "$CHECKSUM" = "${CHART_SHA256}" ] || { echo >&2 "helm/gitlab-runner-${CHART_VERSION:?}.tgz checksum mismatch"; exit 1; }
+  - '[ "${QBEC_CMD:?}" != "apply" ] || QBEC_OPTS="--wait"'
+  - '[ "${QBEC_CMD:?}" != "diff" ] || QBEC_OPTS="--ignore-label=rkways.com/prune-key --ignore-annotation=com.gitlab.ci.cijoburl --ignore-annotation=com.gitlab.ci.revision --ignore-annotation=kubernetes.io/change-cause"'
+  - qbec "${QBEC_CMD:?}" ${QBEC_OPTS:-} --strict-vars
+    --force:k8s-context=__incluster__
+    --vm:ext-str=com.gitlab.ci.project="${CI_PROJECT_NAME:?}"
+    --vm:ext-str=rkways.com/prune-key="${QBEC_PRUNE_KEY:?}"
+    --vm:ext-str=kubernetes.io/change-cause="${CI_JOB_URL:?}"
+    --vm:ext-str=com.gitlab.ci.cijoburl="${CI_JOB_URL:?}"
+    --vm:ext-str=com.gitlab.ci.revision="${CI_COMMIT_SHA:?}"
+    --vm:ext-str=GITLAB_RUNNER_TOKEN
+    --vm:ext-str=CHART_VERSION
+    "${QBEC_ENV:?}" || [ "$QBEC_CMD" = "diff" -a "${QBEC_DIFF_PASS:-}" != "" ] || { [ "$QBEC_CMD" != "diff" ] || echo "Set QBEC_DIFF_PASS=1 on pipeline if you are happy with the diff"; exit 1; }
+
+deploy:
+  extends:
+  - .qbec-cmd
+  variables:
+    QBEC_CMD: "apply"
+    QBEC_PRUNE_KEY: "${CI_PROJECT_PATH_SLUG}-${CI_ENVIRONMENT_SLUG}"
+    GITLAB_RUNNER_TOKEN: ${PROJ_CI_GITLAB_RUNNER_TOKEN}
+  environment:
+    name: prod
+  only:
+  - master
+
+branch-diff:
+  extends:
+  - .qbec-cmd
+  variables:
+    # diff against prod env
+    QBEC_CMD: "diff"
+    QBEC_PRUNE_KEY: "${CI_PROJECT_PATH_SLUG}-prod"
+    GITLAB_RUNNER_TOKEN: fake_invalid_token
+  except:
+  - master
+
+before_script:
+- |
+    cat <<EOF >environments.yaml
+    apiVersion: qbec.io/v1alpha1
+    kind: EnvironmentMap
+    spec:
+      environments:
+        '${QBEC_ENV:?}':
+          defaultNamespace: ci-runners
+          server: https://${KUBERNETES_SERVICE_HOST:?}:${KUBERNETES_SERVICE_PORT:?}
+    EOF
