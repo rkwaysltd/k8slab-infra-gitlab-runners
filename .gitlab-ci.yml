@@ -13,7 +13,7 @@ variables:
   stage: deploy
   script:
   - jb install
-  - helm pull gitlab-runner --repo https://charts.gitlab.io "${CHART_VERSION:?}" -d helm
+  - helm pull gitlab-runner --repo https://charts.gitlab.io --version "${CHART_VERSION:?}" -d helm
   - |
     CHECKSUM=$(sha256sum "helm/gitlab-runner-${CHART_VERSION:?}.tgz" | cut -d ' ' -f1)
     [ "$CHECKSUM" = "${CHART_SHA256}" ] || { echo >&2 "helm/gitlab-runner-${CHART_VERSION:?}.tgz checksum mismatch"; exit 1; }
