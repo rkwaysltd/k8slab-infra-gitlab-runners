@@ -1,0 +1,6 @@
+# jb install
+vendor/
+# helm pull gitlab-runner --repo https://charts.gitlab.io --version 0.27.0 -d helm
+helm/
+# Local cluster or created by CI
+environments.yaml

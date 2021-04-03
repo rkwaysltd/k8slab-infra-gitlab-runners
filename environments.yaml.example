@@ -1,0 +1,8 @@
+apiVersion: qbec.io/v1alpha1
+kind: EnvironmentMap
+spec:
+  # the environments key is exactly the same as the environments key in qbec.yaml
+  environments:
+    k8slab:
+      defaultNamespace: gitlab-runners
+      server: https://127.0.0.1:6443
