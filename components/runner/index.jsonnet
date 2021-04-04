@@ -10,7 +10,7 @@ local runnersConfig = {
   common: {
     defaultBuildImage: params.runnerTemplateValues.defaultBuildImage,
     pruneKey: std.extVar('rkways.com/prune-key'),
-    appLabel: k8slab.name('job'),
+    appLabel: k8slab.name() + '-ci-job',
   },
   arm64: self.common {
     arch: 'arm64',
