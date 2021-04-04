@@ -7,8 +7,20 @@ local gitlabRunnerNamespace = k.Namespace(params.namespace);
 
 // Kubernetes executor configuration
 local runnersConfig = {
-  defaultBuildImage: params.defaultBuildImage,
-  text: |||
+  common: {
+    defaultBuildImage: params.runnerTemplateValues.defaultBuildImage,
+    pruneKey: std.extVar('rkways.com/prune-key'),
+    appLabel: k8slab.name('job'),
+  },
+  arm64: self.common {
+    arch: 'arm64',
+    helperImage: params.runnerTemplateValues.helperImageArm64,
+  },
+  amd64: self.common {
+    arch: 'amd64',
+    helperImage: params.runnerTemplateValues.helperImageAmd64,
+  },
+  tmpl: |||
     [[runners]]
       ## Feature flags for Runner
       ## - FF_GITLAB_REGISTRY_HELPER_IMAGE - the runner will pull the image from registry.gitlab.com
@@ -68,20 +80,22 @@ local runnersConfig = {
 
       ## Helper container image
       ##
-      helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-${CI_RUNNER_REVISION}"
+      helper_image = "%(helperImage)s"
 
       ## Specify node labels for CI job pods assignment
       ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
       ##
       [runners.kubernetes.node_selector]
-        "kubernetes.io/arch" = "arm64"
+        "kubernetes.io/arch" = "%(arch)s"
 
       ## Specify pod labels for CI job pods
       ##
       [runners.kubernetes.pod_labels]
-        "rkways.com/prune-key" = "gitlab-runner-xxx-runner"
-        "app" = "gitlab-runner-xxx"
-  ||| % self,
+        "rkways.com/prune-key" = "%(pruneKey)s"
+        "app" = "%(appLabel)s"
+  |||,
+  textArm64: self.tmpl % self.arm64,
+  textAmd64: self.tmpl % self.amd64,
 };
 
 local gitlabRunnerHelm = std.native('expandHelmTemplate')(
@@ -100,7 +114,7 @@ local gitlabRunnerHelm = std.native('expandHelmTemplate')(
 
     // Configuration
     runners: {
-      config: runnersConfig.text,
+      config: runnersConfig.textArm64 + runnersConfig.textAmd64,
     },
   },
   {
