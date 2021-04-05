@@ -7,7 +7,7 @@
         // Default Docker image to run in job if none specified
         // sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f is busybox:1.32.1
         //
-        defaultBuildImage: 'sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f',
+        defaultBuildImage: 'busybox@sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f',
         // Helper container images
         helperImageArm64: 'registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-${CI_RUNNER_REVISION}',
         helperImageAmd64: 'registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:amd64-${CI_RUNNER_REVISION}',
