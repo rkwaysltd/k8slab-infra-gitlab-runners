@@ -9,18 +9,22 @@ local gitlabRunnerNamespace = k.Namespace(params.namespace);
 local runnersConfig = {
   common: {
     defaultBuildImage: params.runnerTemplateValues.defaultBuildImage,
+    tags: ['arch-any', 'arch-%s' % self.arch],
+    tagList: std.join(',', self.tags),
     pruneKey: std.extVar('rkways.com/prune-key'),
     appLabel: k8slab.name() + '-ci-job',
   },
   arm64: self.common {
     arch: 'arm64',
+    configMapEntry: 'config.template.arm64.toml',
     helperImage: params.runnerTemplateValues.helperImageArm64,
   },
   amd64: self.common {
     arch: 'amd64',
+    configMapEntry: 'config.template.amd64.toml',
     helperImage: params.runnerTemplateValues.helperImageAmd64,
   },
-  tmpl: |||
+  configTmpl: |||
     [[runners]]
       ## Feature flags for Runner
       ## - FF_GITLAB_REGISTRY_HELPER_IMAGE - the runner will pull the image from registry.gitlab.com
@@ -94,11 +98,9 @@ local runnersConfig = {
         "rkways.com/prune-key" = "%(pruneKey)s"
         "app" = "%(appLabel)s"
   |||,
-  textArm64: self.tmpl % self.arm64,
-  textAmd64: self.tmpl % self.amd64,
 };
 
-local gitlabRunnerHelm = std.native('expandHelmTemplate')(
+local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmTemplate')(
   '../../helm/gitlab-runner-%s.tgz' % std.extVar('CHART_VERSION'),
   params.helmValues {
     // The registration token for adding new Runners to the GitLab server. This must
@@ -112,9 +114,9 @@ local gitlabRunnerHelm = std.native('expandHelmTemplate')(
       create: true,
     },
 
-    // Configuration
     runners: {
-      config: runnersConfig.textArm64 + runnersConfig.textAmd64,
+      // Single config template not good enough
+      config: '# check config.template.*.toml entries',
     },
   },
   {
@@ -123,6 +125,32 @@ local gitlabRunnerHelm = std.native('expandHelmTemplate')(
     thisFile: std.thisFile,
     verbose: true,
   }
-);
+));
+
+local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
+  local configMapName = k8slab.name() + '-gitlab-runner',
+  local registerCmd = 'CONFIG_TEMPLATE_K8SLAB="%(configMapEntry)s" RUNNER_TAG_LIST="%(tagList)s" sh /configmaps/register-the-runner-k8slab',
+  ConfigMap+: {
+    [configMapName]+: {
+      data+: {
+        // Multiple configuration templates
+        [runnersConfig.arm64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.arm64,
+        [runnersConfig.amd64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.amd64,
+        // Custom registration procedure
+        'register-the-runner': '#!/bin/bash\nexit 0\n',
+        'register-the-runner-k8slab': std.strReplace(
+          gitlabRunnerHelmRender.ConfigMap[configMapName].data['register-the-runner'],
+          '/configmaps/config.template.toml',
+          '${CONFIG_TEMPLATE_K8SLAB}',
+        ),
+        'pre-entrypoint-script': std.join('\n', [
+          '#!/bin/bash',
+          registerCmd % runnersConfig.arm64,
+          registerCmd % runnersConfig.amd64,
+        ]),
+      },
+    },
+  },
+});
 
 [gitlabRunnerNamespace] + gitlabRunnerHelm
