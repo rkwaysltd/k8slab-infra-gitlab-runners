@@ -141,7 +141,7 @@ local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
         'register-the-runner-k8slab': std.strReplace(
           gitlabRunnerHelmRender.ConfigMap[configMapName].data['register-the-runner'],
           '/configmaps/config.template.toml',
-          '${CONFIG_TEMPLATE_K8SLAB}',
+          '/configmaps/${CONFIG_TEMPLATE_K8SLAB}',
         ),
         'pre-entrypoint-script': std.join('\n', [
           '#!/bin/bash',
