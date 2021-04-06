@@ -146,6 +146,8 @@ local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmT
     runners: {
       // Single config template not good enough
       config: '# check config.template.*.toml entries',
+      // See https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/253
+      namespace: gitlabRunnerJobNamespace.metadata.name,
     },
   },
   {
