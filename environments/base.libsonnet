@@ -9,6 +9,23 @@
           // sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f is busybox:1.32.1
           //
           defaultBuildImage: 'busybox@sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f',
+          // Resources limits/requests
+          //
+          // - build container
+          build_cpu_limit: '200m',
+          build_cpu_request: '100m',
+          build_memory_limit: '256Mi',
+          build_memory_request: '128Mi',
+          // - helper container
+          helper_cpu_limit: '200m',
+          helper_cpu_request: '100m',
+          helper_memory_limit: '256Mi',
+          helper_memory_request: '128Mi',
+          // - service container
+          service_cpu_limit: '200m',
+          service_cpu_request: '100m',
+          service_memory_limit: '256Mi',
+          service_memory_request: '128Mi',
         },
         arm64: {
           // Helper container image

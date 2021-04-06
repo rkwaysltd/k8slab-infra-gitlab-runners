@@ -51,33 +51,33 @@ local runnersConfig = {
 
       ## The CPU allocation given to/requested for build containers
       ##
-      cpu_limit = "200m"
-      cpu_request = "100m"
+      cpu_limit = "%(build_cpu_limit)s"
+      cpu_request = "%(build_cpu_request)s"
 
       ## The CPU allocation given to/requested for build helper containers
       ##
-      helper_cpu_limit = "200m"
-      helper_cpu_request = "100m"
+      helper_cpu_limit = "%(helper_cpu_limit)s"
+      helper_cpu_request = "%(helper_cpu_request)s"
 
       ## The CPU allocation given to/requested for build service containers
       ##
-      service_cpu_limit = "200m"
-      service_cpu_request = "100m"
+      service_cpu_limit = "%(service_cpu_limit)s"
+      service_cpu_request = "%(service_cpu_request)s"
 
       ## The amount of memory allocated to/requested from build containers
       ##
-      memory_limit = "256Mi"
-      memory_request = "128Mi"
+      memory_limit = "%(build_memory_limit)s"
+      memory_request = "%(build_memory_request)s"
 
       ## The amount of memory allocated to/requested from build helper containers
       ##
-      helper_memory_limit = "256Mi"
-      helper_memory_request = "128Mi"
+      helper_memory_limit = "%(helper_memory_limit)s"
+      helper_memory_request = "%(helper_memory_request)s"
 
       ## The amount of memory allocated to/requested from build service containers
       ##
-      service_memory_limit = "256Mi"
-      service_memory_request = "128Mi"
+      service_memory_limit = "%(service_memory_limit)s"
+      service_memory_request = "%(service_memory_request)s"
 
       ## Helper container image
       ##
@@ -135,6 +135,7 @@ local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
         [runnersConfig.amd64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.amd64,
         // Custom registration procedure
         'register-the-runner': '#!/bin/bash\nexit 0\n',
+        // Patched registration script
         'register-the-runner-k8slab': std.strReplace(
           gitlabRunnerHelmRender.ConfigMap[configMapName].data['register-the-runner'],
           '/configmaps/config.template.toml',
