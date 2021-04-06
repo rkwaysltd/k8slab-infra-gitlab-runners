@@ -3,7 +3,37 @@ local params = p.components.runner;
 local k = import 'k8slab-kube-libsonnet/kube.libsonnet';
 local k8slab = import 'k8slab-kube-libsonnet/k8slab.libsonnet';
 
+// Same as many objects in rendered Helm
+local longName = k8slab.name() + '-gitlab-runner';
+
 local gitlabRunnerNamespace = k.Namespace(params.namespace);
+local gitlabRunnerServiceAccount = k.ServiceAccount(longName) {
+  metadata+: {
+    namespace: gitlabRunnerNamespace.metadata.name,
+  },
+};
+local gitlabRunnerJobNamespace = k.Namespace(params.jobNamespace);
+local gitlabRunnerRole = k.Role(longName) {
+  metadata+: {
+    namespace: gitlabRunnerJobNamespace.metadata.name,
+  },
+  rules: [{
+    apiGroups: [''],
+    resources: ['pods', 'secrets'],
+    verbs: ['get', 'list', 'watch', 'create', 'patch', 'delete'],
+  }, {
+    apiGroups: [''],
+    resources: ['pods/exec', 'pods/attach'],
+    verbs: ['get', 'create'],
+  }],
+};
+local gitlabRunnerRoleBinding = k.RoleBinding(longName) {
+  metadata+: {
+    namespace: gitlabRunnerJobNamespace.metadata.name,
+  },
+  roleRef_: gitlabRunnerRole,
+  subjects_+: [gitlabRunnerServiceAccount],
+};
 
 // Kubernetes executor configuration
 local runnersConfig = {
@@ -12,6 +42,7 @@ local runnersConfig = {
     tagList: std.join(',', self.tags),
     pruneKey: std.extVar('rkways.com/prune-key'),
     appLabel: k8slab.name() + '-ci-job',
+    jobNamespace: gitlabRunnerJobNamespace.metadata.name,
   },
   arm64: self.common + params.runnerTemplateValues.arm64 {
     arch: 'arm64',
@@ -43,11 +74,11 @@ local runnersConfig = {
 
       ## Service Account to be used for runners
       ##
-      #service_account = "gitlab-runner-infra-clusteradmin"
+      #service_account = "default"
 
       ## Namespace to run Kubernetes jobs in (defaults to 'default')
       ##
-      #namespace = "infra"
+      namespace = "%(jobNamespace)s"
 
       ## The CPU allocation given to/requested for build containers
       ##
@@ -108,7 +139,8 @@ local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmT
 
     // RBAC
     rbac: {
-      create: true,
+      create: false,
+      serviceAccountName: gitlabRunnerServiceAccount.metadata.name,
     },
 
     runners: {
@@ -125,10 +157,9 @@ local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmT
 ));
 
 local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
-  local configMapName = k8slab.name() + '-gitlab-runner',
   local registerCmd = 'CONFIG_TEMPLATE_K8SLAB="%(configMapEntry)s" RUNNER_TAG_LIST="%(tagList)s" sh /configmaps/register-the-runner-k8slab',
   ConfigMap+: {
-    [configMapName]+: {
+    [longName]+: {
       data+: {
         // Multiple configuration templates
         [runnersConfig.arm64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.arm64,
@@ -137,7 +168,7 @@ local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
         'register-the-runner': '#!/bin/bash\nexit 0\n',
         // Patched registration script
         'register-the-runner-k8slab': std.strReplace(
-          gitlabRunnerHelmRender.ConfigMap[configMapName].data['register-the-runner'],
+          gitlabRunnerHelmRender.ConfigMap[longName].data['register-the-runner'],
           '/configmaps/config.template.toml',
           '/configmaps/${CONFIG_TEMPLATE_K8SLAB}',
         ),
@@ -151,4 +182,4 @@ local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
   },
 });
 
-[gitlabRunnerNamespace] + gitlabRunnerHelm
+[gitlabRunnerNamespace, gitlabRunnerServiceAccount, gitlabRunnerJobNamespace, gitlabRunnerRole, gitlabRunnerRoleBinding] + gitlabRunnerHelm

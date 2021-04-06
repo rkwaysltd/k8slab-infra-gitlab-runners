@@ -2,7 +2,10 @@
 {
   components: {
     runner: {
+      // Manager pod namespace
       namespace: 'ci-runners',
+      // Executor pods namespace
+      jobNamespace: 'ci-jobs',
       runnerTemplateValues: {
         common: {
           // Default Docker image to run in job if none specified
