@@ -7,22 +7,19 @@ local gitlabRunnerNamespace = k.Namespace(params.namespace);
 
 // Kubernetes executor configuration
 local runnersConfig = {
-  common: {
-    defaultBuildImage: params.runnerTemplateValues.defaultBuildImage,
-    tags: ['arch-any', 'arch-%s' % self.arch],
+  common: params.runnerTemplateValues.common {
+    tags+: ['arch-any', 'arch-%s' % self.arch],
     tagList: std.join(',', self.tags),
     pruneKey: std.extVar('rkways.com/prune-key'),
     appLabel: k8slab.name() + '-ci-job',
   },
-  arm64: self.common {
+  arm64: self.common + params.runnerTemplateValues.arm64 {
     arch: 'arm64',
     configMapEntry: 'config.template.arm64.toml',
-    helperImage: params.runnerTemplateValues.helperImageArm64,
   },
-  amd64: self.common {
+  amd64: self.common + params.runnerTemplateValues.amd64 {
     arch: 'amd64',
     configMapEntry: 'config.template.amd64.toml',
-    helperImage: params.runnerTemplateValues.helperImageAmd64,
   },
   configTmpl: |||
     [[runners]]
