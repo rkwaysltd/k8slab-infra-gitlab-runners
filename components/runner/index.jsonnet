@@ -128,6 +128,16 @@ local runnersConfig = {
   |||,
 };
 
+// All valid configuration entries from runnersConfig
+local runnersConfigNames = std.filter(
+  function(entry)
+    if std.type(runnersConfig[entry]) == 'object' then
+      std.objectHas(runnersConfig[entry], 'configMapEntry')
+    else
+      false,
+  std.objectFields(runnersConfig)
+);
+
 local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmTemplate')(
   '../../helm/gitlab-runner-%s.tgz' % std.extVar('CHART_VERSION'),
   params.helmValues {
@@ -160,12 +170,15 @@ local gitlabRunnerHelmRender = k8slab.arrayByKindAndName(std.native('expandHelmT
 
 local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
   local registerCmd = 'CONFIG_TEMPLATE_K8SLAB="%(configMapEntry)s" RUNNER_TAG_LIST="%(tagList)s" sh /configmaps/register-the-runner-k8slab',
+  local configMapEntryName(configName) = runnersConfig[configName].configMapEntry,
+  local configByName(configName) = $.ConfigMap[longName].data[configMapEntryName(configName)],
   ConfigMap+: {
     [longName]+: {
       data+: {
         // Multiple configuration templates
-        [runnersConfig.arm64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.arm64,
-        [runnersConfig.amd64.configMapEntry]: runnersConfig.configTmpl % runnersConfig.amd64,
+        [configMapEntryName(configName)]: runnersConfig.configTmpl % runnersConfig[configName]
+        for configName in runnersConfigNames
+      } + {
         // Custom registration procedure
         'register-the-runner': '#!/bin/bash\nexit 0\n',
         // Patched registration script
@@ -174,11 +187,29 @@ local gitlabRunnerHelm = k8slab.arrayFromKindAndName(gitlabRunnerHelmRender {
           '/configmaps/config.template.toml',
           '/configmaps/${CONFIG_TEMPLATE_K8SLAB}',
         ),
-        'pre-entrypoint-script': std.join('\n', [
-          '#!/bin/bash',
-          registerCmd % runnersConfig.arm64,
-          registerCmd % runnersConfig.amd64,
-        ]),
+        'pre-entrypoint-script': std.join(
+          '\n', ['#!/bin/bash'] + [registerCmd % runnersConfig[configName] for configName in runnersConfigNames]
+        ),
+      },
+    },
+  },
+  Deployment+: {
+    [longName]+: {
+      spec+: {
+        template+: {
+          metadata+: {
+            annotations+: {
+              local allConfig = std.join(
+                '',
+                std.map(
+                  function(configName) configByName(configName),
+                  runnersConfigNames
+                )
+              ),
+              'rkways.com/checksum-cfgtmpl': std.md5(allConfig),
+            },
+          },
+        },
       },
     },
   },
