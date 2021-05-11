@@ -4,6 +4,17 @@ local base = import './base.libsonnet';
 base {
   components+: {
     runner+: {
+      runnerTemplateValues+: {
+        common+: {
+          // Resources limits/requests
+          //
+          // - build container
+          build_cpu_limit: '4000m',
+          build_cpu_request: '1000m',
+          build_memory_limit: '3Gi',
+          build_memory_request: '1Gi',
+        },
+      },
       helmValues+: {
         // Node labels for pod assignment (gitlab runner manager)
         //
