@@ -10,7 +10,7 @@ base {
           //
           // - build container
           build_cpu_limit: '4000m',
-          build_cpu_request: '1000m',
+          build_cpu_request: '250m',
           build_memory_limit: '3Gi',
           build_memory_request: '1Gi',
         },
