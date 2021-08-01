@@ -19,7 +19,7 @@ local gitlabRunnerRole = k.Role(longName) {
   },
   rules: [{
     apiGroups: [''],
-    resources: ['pods', 'secrets'],
+    resources: ['pods', 'secrets', 'configmaps'],
     verbs: ['get', 'list', 'watch', 'create', 'patch', 'delete'],
   }, {
     apiGroups: [''],
