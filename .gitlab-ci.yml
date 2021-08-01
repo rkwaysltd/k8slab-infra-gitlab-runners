@@ -6,13 +6,13 @@ default:
 stages:
 - deploy
 
-image: rkwaysltd/citools:v0.0.3@sha256:01890f97b011e04d5de5e4518a50a977585da7571c316816a2a00ecfa97dd972
+image: rkwaysltd/citools:v0.0.4@sha256:da193d768f749a9dcd7018ef61b541e17868496c61a3792780b24a11fb415a16
 
 variables:
   QBEC_YES: "true"
   QBEC_ENV: "k8slab"
-  CHART_VERSION: "0.27.0"
-  CHART_SHA256: ef34b1696d9eb945cb1221cef8031caded07dd6f345f6228d41ec49ba73986fc
+  CHART_VERSION: "0.31.0"
+  CHART_SHA256: 82b5d32769a65a1a91fb3c0331ffd94b4c7f974e289093df8344bb2ecf851c07
 
 .qbec-cmd:
   stage: deploy

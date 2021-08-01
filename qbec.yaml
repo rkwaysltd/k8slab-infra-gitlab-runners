@@ -21,7 +21,7 @@ spec:
       default: invalid_no_access
       secret: true
     - name: CHART_VERSION
-      default: 0.27.0
+      default: 0.31.0
   postProcessor: vendor/k8slab-kube-libsonnet/pp.libsonnet
   environments:
     default:

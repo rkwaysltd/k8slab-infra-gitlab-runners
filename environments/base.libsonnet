@@ -9,9 +9,9 @@
       runnerTemplateValues: {
         common: {
           // Default Docker image to run in job if none specified
-          // sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f is busybox:1.32.1
+          // sha256:0f354ec1728d9ff32edcd7d1b8bbdfc798277ad36120dc3dc683be44524c8b60 is busybox:1.33.1
           //
-          defaultBuildImage: 'busybox@sha256:c5439d7db88ab5423999530349d327b04279ad3161d7596d2126dfb5b02bfd1f',
+          defaultBuildImage: 'busybox@sha256:0f354ec1728d9ff32edcd7d1b8bbdfc798277ad36120dc3dc683be44524c8b60',
           // Resources limits/requests
           //
           // - build container
